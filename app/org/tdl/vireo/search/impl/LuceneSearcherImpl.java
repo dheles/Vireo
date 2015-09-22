@@ -91,6 +91,7 @@ public class LuceneSearcherImpl implements Searcher {
 		SORT_SUB_FIELDS[SearchOrder.REVIEWER_NOTES.ordinal()] = "reviewerNotes";
 		SORT_SUB_FIELDS[SearchOrder.LAST_EVENT_ENTRY.ordinal()] = "lastEventEntry";
 		SORT_SUB_FIELDS[SearchOrder.LAST_EVENT_TIME.ordinal()] = "lastEventTime";
+		SORT_SUB_FIELDS[SearchOrder.ORCID.ordinal()] = "orcid";
 		
 		// Sort fields for action logs
 		for (int i=0; i < SearchOrder.values().length; i++) 
@@ -180,6 +181,8 @@ public class LuceneSearcherImpl implements Searcher {
 					sortedIds.add(Long.valueOf(doc.get("subId")));
 				}
 				
+				searcher.close();
+				
 				List<Submission> results = subRepo.findSubmissions(sortedIds);
 				Collections.sort(results,new ModelComparator(sortedIds));
 				
@@ -228,6 +231,8 @@ public class LuceneSearcherImpl implements Searcher {
 					sortedIds.add(Long.valueOf(doc.get("logId")));
 				}
 				
+				searcher.close();
+				
 				List<ActionLog> results = subRepo.findActionLogs(sortedIds);
 				Collections.sort(results,new ModelComparator(sortedIds));
 
@@ -269,7 +274,9 @@ public class LuceneSearcherImpl implements Searcher {
 					Document doc = searcher.doc(topDocs.scoreDocs[i].doc);
 					sortedIds[i] = Long.valueOf(doc.get("subId")).longValue();
 				}
-
+				
+				searcher.close();
+				
 				return sortedIds;
 				
 			} finally {
@@ -310,7 +317,8 @@ public class LuceneSearcherImpl implements Searcher {
 					Document doc = searcher.doc(topDocs.scoreDocs[i].doc);
 					sortedIds[i] = Long.valueOf(doc.get("logId")).longValue();
 				}
-
+				searcher.close();
+				
 				return sortedIds;
 				
 			} finally {

@@ -21,6 +21,7 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 
 import org.apache.commons.io.FilenameUtils;
+import org.tdl.vireo.constant.AppConfig;
 import org.tdl.vireo.email.EmailService;
 import org.tdl.vireo.email.VireoEmail;
 import org.tdl.vireo.export.DepositService;
@@ -37,6 +38,7 @@ import org.tdl.vireo.model.Person;
 import org.tdl.vireo.model.RoleType;
 import org.tdl.vireo.model.Submission;
 import org.tdl.vireo.proquest.ProquestVocabularyRepository;
+import org.tdl.vireo.services.Utilities;
 import org.tdl.vireo.state.State;
 
 import play.Logger;
@@ -99,6 +101,10 @@ public class ViewTab extends AbstractVireoController {
 		if(params.get("addActionLogComment")!=null)
 			addActionLogComment(submission);
 		
+		//Check for "Flag submission as "Needs Corrections""
+		if(params.get("status_change") != null)
+		    changeStatus(submission);
+
 		//Check for "Add File"
 		if(params.get("addFile")!=null)
 			addFile(submission);		
@@ -223,8 +229,8 @@ public class ViewTab extends AbstractVireoController {
 					throw new RuntimeException("The Email provided is invalid.");
 				}
 
-				submitter.setEmail(value);
-				currentValue = submitter.getEmail();
+				submitter.setCurrentEmailAddress(value);
+				currentValue = submitter.getCurrentEmailAddress();
 
 				//Year of Birth
 			} else if("birthYear".equals(field)) {						
@@ -244,6 +250,23 @@ public class ViewTab extends AbstractVireoController {
 					submission.setStudentBirthYear(null);
 				}
 				currentValue = submission.getStudentBirthYear();
+				
+				//ORCID
+			} else if("orcid".equals(field)) {
+				
+				// Verify the ORCID id by pinging their API
+				boolean orcidVerify = true;
+				if (settingRepo.getConfigBoolean(AppConfig.ORCID_VALIDATION)) {
+					if (settingRepo.getConfigBoolean(AppConfig.ORCID_AUTHENTICATION))
+						orcidVerify = Utilities.verifyOrcid(value, submission.getStudentFirstName(), submission.getStudentLastName());
+					else
+						orcidVerify = Utilities.verifyOrcid(value);
+				}
+				if (!orcidVerify)
+					throw new RuntimeException("The provided ORCID could not be validated.");
+				
+				submission.setOrcid(value);
+				currentValue = submission.getOrcid();	
 
 				//Permanent Phone
 			} else if("permPhone".equals(field)){
@@ -795,9 +818,6 @@ public class ViewTab extends AbstractVireoController {
 		}
 		
 		if(!validation.hasErrors()) {
-			if(params.get("status_change") != null)
-				submission.setState(stateManager.getState("NeedsCorrection"));
-						
 			VireoEmail email = emailService.createEmail();
 			
 			// Run the parameters
@@ -810,20 +830,18 @@ public class ViewTab extends AbstractVireoController {
 			email.addTo(submission.getSubmitter());
 			
 			//Create list of carbon copies
-			if(params.get("cc_advisor") != null && submission.getCommitteeContactEmail() != null) {
+			if(params.get("cc_advisor") != null && submission.getCommitteeContactEmail() != null)
 				email.addCc(submission.getCommitteeContactEmail());
-			}
 			
 			email.setFrom(context.getPerson());
 			email.setReplyTo(context.getPerson());
 						
-			if(params.get("email_student") != null && "public".equals(params.get("visibility"))) {	
+			if(params.get("email_student") != null && params.get("visibility").equals("public")) {
 				// Send the email and log it after completion
 				email.setLogOnCompletion(context.getPerson(), submission);
-				emailService.sendEmail(email,false);
-				
+				emailService.sendEmail(email,true);
 			} else {
-				// Otherwise just log it.
+				// Generate log.
 				subject = email.getSubject();
 				message = email.getMessage();
 				
@@ -837,7 +855,6 @@ public class ViewTab extends AbstractVireoController {
 				if("private".equals(params.get("visibility")))
 					log.setPrivate(true);
 				
-				submission.save();
 				log.save();
 			}
 		}
@@ -895,6 +912,19 @@ public class ViewTab extends AbstractVireoController {
 	}
 	
 	/**
+	 * The method to change the status of a submission to Needs Correction
+	 *
+	 * @param sub
+	 */
+	@Security(RoleType.REVIEWER)
+	private static void changeStatus(Submission sub){
+	    if(!validation.hasErrors()) {
+	        sub.setState(stateManager.getState("NeedsCorrection"));
+	        sub.save();
+	    }
+	}
+
+	/**
 	 * The method to add a file to the submission being viewed.
 	 * This checks the type of file being uploaded (note, primary, supplement)
 	 * and calls the appropriate private method.
@@ -910,6 +940,8 @@ public class ViewTab extends AbstractVireoController {
 			uploadPrimary(sub);
 		}else if("additional".equals(uploadType)){
 			uploadAdditional(sub);
+		} else {
+			validation.addError("addFile", "You must choose to replace the Primary file or add an additional file.");
 		}
 		
 		VireoEmail email = null;
@@ -943,15 +975,8 @@ public class ViewTab extends AbstractVireoController {
 			}			
 		}		
 
-		if(!validation.hasErrors()) {
-			if(params.get("needsCorrection") != null)
-				sub.setState(stateManager.getState("NeedsCorrection"));
-						
-			sub.save();
-		}	
-		
-		if (email != null)
-			emailService.sendEmail(email,false);
+		if(!validation.hasErrors() && email != null)
+				emailService.sendEmail(email,true);
 	}
 	
 	/**
@@ -1133,7 +1158,7 @@ public class ViewTab extends AbstractVireoController {
 		email.setFailureLogMessage("Failed to resend advisor request to "+advisorEmail);
 		
 		
-		emailService.sendEmail(email,false);
+		emailService.sendEmail(email,true);
 		
 		view();
 	}

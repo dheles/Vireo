@@ -16,13 +16,21 @@ Plus all the FieldConfig objects
 
 }*
 
-#{ifEnabled [STUDENT_FIRST_NAME,STUDENT_MIDDLE_NAME,STUDENT_EMAIL,STUDENT_BIRTH_YEAR]}
+#{ifEnabled [STUDENT_FIRST_NAME,STUDENT_MIDDLE_NAME,STUDENT_EMAIL,STUDENT_ORCID,STUDENT_BIRTH_YEAR]}
 <legend>About You</legend>
 #{ifEnabled [STUDENT_FIRST_NAME,STUDENT_MIDDLE_NAME]}
 <div class="control-group #{errorClass 'firstName' /} #{errorClass 'lastName' /} #{errorClass 'middleName' /} #{errorClass 'birthYear' /} ">
     <label class="control-label ">Name:</label>
     <div class="controls">
         <p>${sub?.getStudentFormattedName(org.tdl.vireo.model.NameFormat.LAST_FIRST_MIDDLE_BIRTH)}</p>
+    </div>
+</div>
+#{/ifEnabled}
+#{ifEnabled STUDENT_ORCID }
+<div class="control-group #{errorClass 'orcid' /} ">
+    <label class="control-label">#{fieldLabel STUDENT_ORCID /}:</label>
+    <div class="controls">
+        <p>${sub?.getOrcid() }</p>
     </div>
 </div>
 #{/ifEnabled}
@@ -54,7 +62,7 @@ Plus all the FieldConfig objects
 <div class="control-group #{errorClass 'permEmail' /} ">
     <label class="control-label">#{fieldLabel PERMANENT_EMAIL_ADDRESS /}:</label>
     <div class="controls">
-        <p><a href="mailto:${submitter?.getPermanentEmailAddress()}">${submitter?.getPermanentEmailAddress()}</a></p>
+        <p>${submitter?.getPermanentEmailAddress() != null ? submitter?.getPermanentEmailAddress().length() > 0 ? "<a href='mailto:${submitter?.getPermanentEmailAddress()}'>${submitter?.getPermanentEmailAddress()}</a>" : "" : ""}</p>
     </div>
 </div>
 #{/ifEnabled}
@@ -244,7 +252,7 @@ Plus all the FieldConfig objects
 <div class="control-group #{errorClass 'chairEmail' /} ">
     <label class="control-label">#{fieldLabel COMMITTEE_CONTACT_EMAIL /}:</label>
     <div class="controls">
-        <p><a href="mailto:${sub.getCommitteeContactEmail()}">${sub.getCommitteeContactEmail()}</a></p>
+        <p>${sub.getCommitteeContactEmail() != null ? sub.getCommitteeContactEmail().length() > 0 ? "<a href='mailto:${sub.getCommitteeContactEmail()}'>${sub.getCommitteeContactEmail()}</a>" : "" : ""}</p>
     </div>
 </div>
 #{/ifEnabled}
