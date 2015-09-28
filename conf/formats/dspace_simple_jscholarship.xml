@@ -25,8 +25,9 @@ ${ attachment.getName() }	bundle:LICENSE
 <?xml version="1.0" encoding="utf-8"?>
 <dublin_core>
 
-    <!-- dc.creator = Student -->
-    <dcvalue element="creator">
+    <!-- change from dc.creator = Student to: -->
+    <!-- dc.contributor.author = Student -->
+    <dcvalue element="contributor" qualifier="author">
         ${ sub.getStudentFormattedName(org.tdl.vireo.model.NameFormat.LAST_FIRST_MIDDLE_BIRTH)?.escapeXml()?.raw() }
     </dcvalue>
 
@@ -274,6 +275,84 @@ ${ attachment.getName() }	bundle:LICENSE
 	    ${ liftDate.format("yyyy-MM-dd") }
 	</dcvalue>
 	#{/if}
+</dublin_core>
+#{/elseif}
+#{elseif "metadata_jhuthesis.xml".equals(template) }
+<?xml version="1.0" encoding="utf-8"?>
+<dublin_core schema="jhuthesis">
+    <!--
+    jhuthesis.advisor.primary
+    jhuthesis.advisor.secondary
+    jhuthesis.advisor.externalmember
+    jhuthesis.date.defense
+    jhuthesis.date.submitted
+    jhuthesis.department.degreegranting
+    jhuthesis.department.primaryadvisor
+    jhuthesis.college.degreegranting
+    -->
+
+    <!-- jhuthesis.advisor.primary = dc.contributor.advisor = Committee Members who are flagged as chair (may be multiple) -->
+    #{list items:sub.getCommitteeMembers(), as:'member'}
+    #{if member.hasRole("Chair","Supervisor","Advisor") }
+    <dcvalue element="advisor" qualifier="primary">
+        ${ member.getFormattedName(org.tdl.vireo.model.NameFormat.LAST_FIRST_MIDDLE_BIRTH)?.escapeXml()?.raw() }
+    </dcvalue>
+    #{/if}
+    #{/list}
+
+    <!-- jhuthesis.advisor.secondary = dc.contributor.advisor = Committee Members who are flagged as (co-)chair (may be multiple) -->
+    #{list items:sub.getCommitteeMembers(), as:'member'}
+    #{if member.hasRole("Co-Chair","Co-Supervisor") }
+    <dcvalue element="advisor" qualifier="secondary">
+        ${ member.getFormattedName(org.tdl.vireo.model.NameFormat.LAST_FIRST_MIDDLE_BIRTH)?.escapeXml()?.raw() }
+    </dcvalue>
+    #{/if}
+    #{/list}
+
+    <!-- jhuthesis.advisor.externalmember = dc.contributor.committeeMember = Committee Members who are not flagged as chair (likely multiple) -->
+    #{list items:sub.getCommitteeMembers(), as:'member'}
+    #{if member.hasNoRole() }
+    <dcvalue element="advisor" qualifier="externalmember">
+        ${ member.getFormattedName(org.tdl.vireo.model.NameFormat.LAST_FIRST_MIDDLE_BIRTH)?.escapeXml()?.raw() }
+    </dcvalue>
+    #{/if}
+    #{/list}
+
+    <!-- jhuthesis.date.defense = Defense Date -->
+    #{if sub.getDefenseDate() != null}
+    <dcvalue element="date" qualifier="defense">
+        ${ sub.getDefenseDate().format("yyyy-MM-dd") }
+    </dcvalue>
+    #{/if}
+
+    <!-- jhuthesis.date.submitted = dc.description.provenance = Submission Date -->
+    #{if sub.getSubmissionDate() != null}
+    <dcvalue element="date" qualifier="submitted">
+        ${ sub.getSubmissionDate().format("yyyy-MM-dd") }
+    </dcvalue>
+    #{/if}
+
+    <!-- jhuthesis.department.degreegranting = thesis.degree.department = Department -->
+    #{if sub.getDepartment() != null }
+    <dcvalue element="department" qualifier="degreegranting">
+        ${ sub.getDepartment()?.escapeXml()?.raw() }
+    </dcvalue>
+    #{/if}
+
+    <!-- jhuthesis.department.primaryadvisor = thesis.degree.department = Department -->
+    #{if sub.getDepartment() != null }
+    <dcvalue element="department" qualifier="primaryadvisor">
+        ${ sub.getDepartment()?.escapeXml()?.raw() }
+    </dcvalue>
+    #{/if}
+
+    <!-- jhuthesis.college.degreegranting = College -->
+    #{if sub.getCollege() != null }
+    <dcvalue element="college" qualifier="degreegranting">
+        ${ sub.getCollege()?.escapeXml()?.raw() }
+    </dcvalue>
+    #{/if}
+
 </dublin_core>
 #{/elseif}
 #{else}
